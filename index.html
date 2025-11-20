@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>專注航班 Focus Flight</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap');
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            overflow: hidden;
+            background-color: #f0f0f0;
+            transition: background-color 2s ease;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        body.flying-mode {
+            background-color: #1a1a1a;
+        }
+
+        /* Cabin Wall */
+        .cabin-wall {
+            background-image: radial-gradient(rgba(0,0,0,0.03) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        body.flying-mode .cabin-wall {
+            background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+        }
+
+        /* Window Structure - Full Screen Size */
+        .window-outer-bezel {
+            position: relative;
+            height: 85vh; 
+            width: 56vh; 
+            max-width: 90vw;
+            margin: 0 auto;
+            border-radius: 20vh;
+            background: #e8e8e8;
+            box-shadow: 
+                -15px -15px 30px rgba(255,255,255,0.8),
+                15px 15px 30px rgba(0,0,0,0.2),
+                inset 5px 5px 20px rgba(255,255,255,0.9),
+                inset -5px -5px 20px rgba(0,0,0,0.1);
+            padding: 4vh;
+            transition: transform 0.5s ease;
+            z-index: 10;
+        }
+        
+        @media (max-width: 768px) {
+            .window-outer-bezel {
+                width: 85vw;
+                height: 75vh;
+                border-radius: 100px;
+                padding: 20px;
+            }
+        }
+
+        .window-inner-bezel {
+            width: 100%;
+            height: 100%;
+            border-radius: 16vh;
+            background: #cbd5e1; /* Changed from #1a1a1a to light grey-blue */
+            padding: 1.5vh;
+            box-shadow: inset 2px 2px 8px rgba(0,0,0,0.15); /* Softer shadow */
+        }
+
+        @media (max-width: 768px) {
+            .window-inner-bezel {
+                border-radius: 80px;
+                padding: 10px;
+            }
+        }
+
+        .window-view-port {
+            width: 100%;
+            height: 100%;
+            border-radius: 14.5vh;
+            overflow: hidden;
+            position: relative;
+            /* Sky Blue Fallback */
+            background: #6DD5FA; 
+        }
+
+        @media (max-width: 768px) {
+            .window-view-port {
+                border-radius: 70px;
+            }
+        }
+
+        /* CANVAS LAYER */
+        #cloudCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Glass Effects */
+        .glass-pane {
+            position: absolute;
+            inset: 0;
+            border-radius: 14.5vh;
+            pointer-events: none;
+            z-index: 20; 
+        }
+        
+        @media (max-width: 768px) {
+            .glass-pane { border-radius: 70px; }
+        }
+
+        .glass-scratches {
+            background-image: url('https://www.transparenttextures.com/patterns/scratched-glaze.png');
+            opacity: 0.12;
+            mix-blend-mode: overlay;
+        }
+
+        .glass-reflection {
+            background: linear-gradient(135deg, rgba(255,255,255,0) 40%, rgba(255,255,255,0.08) 45%, rgba(255,255,255,0) 50%);
+        }
+        
+        .glass-vignette {
+            box-shadow: inset 0 0 80px rgba(0,0,0,0.5);
+        }
+
+        .vibrating {
+            animation: turbulence 0.1s infinite linear;
+        }
+
+        @keyframes turbulence {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(0.1px, 0.1px); }
+            50% { transform: translate(0, 0.15px); }
+            75% { transform: translate(-0.1px, 0.1px); }
+            100% { transform: translate(0, 0); }
+        }
+
+        /* Ticket UI */
+        .ticket-container {
+            background: #fff;
+            border-radius: 24px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.25);
+            overflow: hidden;
+            position: relative;
+            width: 90%;
+            max-width: 480px;
+            transform: scale(1);
+            transition: transform 0.3s ease;
+        }
+
+        .ticket-header {
+            background: #0f172a;
+            color: white;
+            padding: 24px 32px;
+            border-bottom: 3px dashed rgba(255,255,255,0.15);
+            position: relative;
+        }
+        
+        .ticket-header::after, .ticket-header::before {
+            content: '';
+            position: absolute;
+            bottom: -12px;
+            width: 24px;
+            height: 24px;
+            background: #f0f0f0;
+            border-radius: 50%;
+        }
+        .ticket-header::after { right: -12px; }
+        .ticket-header::before { left: -12px; }
+
+        .ticket-body {
+            padding: 32px;
+            background-color: #fff;
+            background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
+            background-size: 16px 16px;
+        }
+
+        .ticket-input {
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid #e2e8f0;
+            font-family: 'Share Tech Mono', monospace;
+            letter-spacing: 1px;
+            width: 100%;
+            padding: 8px 0;
+            font-size: 1.2rem;
+            color: #1e293b;
+            text-transform: uppercase;
+            font-weight: bold;
+            transition: border-color 0.3s;
+        }
+        .ticket-input:focus {
+            outline: none;
+            border-bottom-color: #0f172a;
+        }
+        .ticket-input::placeholder {
+            font-size: 1rem;
+        }
+
+        .barcode-font {
+            font-family: 'Libre Barcode 39', cursive;
+            font-size: 56px;
+            color: #334155;
+            line-height: 1;
+            margin-top: 10px;
+        }
+
+        /* Transitions */
+        .hidden-view {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.95) translateY(-30px);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            position: absolute;
+            z-index: -1; /* Ensure it doesn't block clicks when hidden */
+        }
+        
+        .visible-view {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1) translateY(0);
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            z-index: 30;
+        }
+
+        /* Range Slider */
+        input[type=range] {
+            -webkit-appearance: none; 
+            background: transparent; 
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #0f172a;
+            cursor: pointer;
+            margin-top: -10px;
+            box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.1);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #cbd5e0;
+            border-radius: 2px;
+        }
+
+        .hud-panel {
+            background: rgba(15, 23, 42, 0.3);
+            color: rgba(255,255,255,0.95);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255,255,255,0.15);
+            font-family: 'Share Tech Mono', monospace;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.1);
+        }
+        
+        .blinker {
+            width: 8px;
+            height: 8px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            display: inline-block;
+            animation: blink 2s infinite;
+            box-shadow: 0 0 8px #ef4444;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+        }
+
+    </style>
+</head>
+<body class="cabin-wall text-gray-700">
+
+    <!-- Ticket Setup Screen -->
+    <div id="setupPanel" class="visible-view flex justify-center items-center w-full h-full">
+        <div class="ticket-container">
+            <div class="ticket-header">
+                <div class="flex justify-between items-center mb-2">
+                    <h2 class="text-2xl font-bold tracking-widest flex items-center gap-3">
+                        <i class="fas fa-plane-departure"></i> FOCUS AIR
+                    </h2>
+                    <span class="bg-white/20 px-3 py-1 rounded text-xs font-bold uppercase tracking-wider">First Class</span>
+                </div>
+                <div class="flex justify-between text-xs opacity-60 uppercase tracking-wider font-mono">
+                    <span>Passenger Ticket</span>
+                    <span>& Baggage Check</span>
+                </div>
+            </div>
+
+            <div class="ticket-body">
+                <div class="flex justify-between mb-8 gap-6">
+                    <div class="w-1/2">
+                        <div class="text-xs text-gray-400 uppercase font-bold mb-1">From (Origin)</div>
+                        <div class="text-xl font-bold text-gray-800 font-mono border-b-2 border-transparent pb-1.5">REALITY</div>
+                    </div>
+                    <div class="w-1/2 text-right">
+                        <div class="text-xs text-gray-400 uppercase font-bold mb-1">To (Goal)</div>
+                        <input type="text" id="taskInput" placeholder="DEEP WORK" class="ticket-input text-right">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-4 gap-3 mb-10">
+                    <div class="text-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <div class="text-[10px] text-gray-400 uppercase font-bold">Flight</div>
+                        <div class="text-lg font-bold text-gray-800 font-mono">FA88</div>
+                    </div>
+                    <div class="text-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <div class="text-[10px] text-gray-400 uppercase font-bold">Gate</div>
+                        <div class="text-lg font-bold text-gray-800 font-mono">01</div>
+                    </div>
+                    <div class="text-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <div class="text-[10px] text-gray-400 uppercase font-bold">Seat</div>
+                        <div class="text-lg font-bold text-gray-800 font-mono">1A</div>
+                    </div>
+                    <div class="text-center p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <div class="text-[10px] text-gray-400 uppercase font-bold">Date</div>
+                        <div id="dateDisplay" class="text-lg font-bold text-gray-800 font-mono">NOW</div>
+                    </div>
+                </div>
+
+                <div class="mb-8">
+                    <div class="flex justify-between items-end mb-4">
+                        <label class="text-xs font-bold text-gray-400 uppercase tracking-wide">Flight Duration</label>
+                        <div class="text-3xl font-bold text-gray-800 font-mono"><span id="timeDisplay">25</span> <span class="text-sm text-gray-500">MIN</span></div>
+                    </div>
+                    <input type="range" id="timeSlider" min="5" max="120" value="25" step="5" class="w-full">
+                    <div class="flex justify-between text-[10px] text-gray-400 mt-2 font-mono">
+                        <span>SHORT HAUL</span>
+                        <span>LONG HAUL</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-5 border-t border-dashed border-gray-200">
+                    <div class="flex items-center gap-3 text-gray-600">
+                         <i class="fas fa-volume-up text-lg"></i>
+                         <span class="text-xs font-bold uppercase tracking-wide">Cabin Engine Sound</span>
+                    </div>
+                    <div class="relative inline-block w-12 h-6 align-middle select-none">
+                        <input type="checkbox" name="toggle" id="noiseToggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-2 border-gray-300 appearance-none cursor-pointer transition-all duration-300 shadow-sm" style="top:0; left:0" checked/>
+                        <label for="noiseToggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-200 cursor-pointer transition-colors duration-300"></label>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-6">
+                    <div class="barcode-font opacity-40 transform scale-y-75">123456789012</div>
+                </div>
+            </div>
+
+            <button onclick="startFlight()" class="w-full bg-gray-900 hover:bg-black text-white py-5 font-bold text-base uppercase tracking-widest transition-colors flex items-center justify-center gap-3">
+                <span>Boarding Now</span> <i class="fas fa-walking text-lg"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Immersive Flight Mode -->
+    <div id="flightPanel" class="hidden-view absolute inset-0 flex flex-col items-center justify-center">
+        
+        <div id="windowFrame" class="window-outer-bezel">
+            <div class="window-inner-bezel">
+                <div class="window-view-port">
+                    <canvas id="cloudCanvas"></canvas>
+                    
+                    <div class="glass-pane glass-scratches"></div>
+                    <div class="glass-pane glass-reflection"></div>
+                    <div class="glass-pane glass-vignette"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="hudControls" class="absolute bottom-8 flex flex-col items-center transition-opacity duration-500 hover:opacity-100 opacity-60 z-30">
+            
+            <div class="hud-panel px-10 py-5 rounded-full flex flex-col items-center mb-6 backdrop-blur-md border border-white/10 shadow-2xl">
+                <div class="text-xs text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-3">
+                    <span class="blinker"></span> ALT 35,000 FT
+                </div>
+                <div id="currentTaskDisplay" class="text-base font-bold mb-1 text-white tracking-widest uppercase font-mono">Reading</div>
+                <div id="countdown" class="text-5xl font-bold text-white tracking-widest font-mono">25:00</div>
+            </div>
+
+            <!-- Updated Button triggers custom modal -->
+            <button onclick="showConfirmModal()" class="group text-white/50 hover:text-white text-xs tracking-[0.2em] uppercase transition-colors py-3 px-6 rounded-full flex items-center gap-2 bg-black/20 hover:bg-black/40 cursor-pointer z-40">
+                <span class="group-hover:translate-y-0.5 transition-transform"><i class="fas fa-plane-arrival"></i></span>
+                Emergency Landing
+            </button>
+        </div>
+    </div>
+
+    <!-- Confirm Landing Modal -->
+    <div id="confirmModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl p-8 max-w-xs w-full text-center shadow-2xl">
+            <div class="text-xl font-bold text-gray-800 mb-2">Request Landing?</div>
+            <p class="text-sm text-gray-500 mb-6">Are you sure you want to end your focus session early?</p>
+            <div class="flex gap-4">
+                <button onclick="cancelLand()" class="flex-1 py-3 rounded-xl border border-gray-200 text-gray-600 font-bold text-sm hover:bg-gray-50 transition">
+                    Cancel
+                </button>
+                <button onclick="confirmLand()" class="flex-1 py-3 rounded-xl bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition shadow-lg">
+                    Land Now
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Arrival Modal -->
+    <div id="arrivalModal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center hidden transition-opacity duration-500">
+        <div class="bg-white rounded-3xl p-0 max-w-sm w-full text-center m-4 shadow-2xl overflow-hidden transform scale-100">
+            <div class="bg-gradient-to-br from-green-500 to-emerald-700 p-8">
+                <i class="fas fa-check-circle text-white text-6xl shadow-lg rounded-full"></i>
+            </div>
+            <div class="p-10">
+                <h2 class="text-2xl font-bold text-gray-800 mb-3 font-mono uppercase tracking-tight">Destination Reached</h2>
+                <p class="text-sm text-gray-500 mb-10 font-mono leading-relaxed">Thank you for flying with Focus Air.<br>We hope you had a productive journey.</p>
+                <button onclick="resetApp()" class="w-full bg-gray-900 text-white font-bold py-5 rounded-2xl font-mono uppercase hover:bg-black transition shadow-lg text-sm tracking-widest">
+                    Book Return Flight
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- ADVANCED GENERATIVE CLOUD ENGINE ---
+        const canvas = document.getElementById('cloudCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let clouds = [];
+        let animationFrameId;
+        let cloudBrush; 
+
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // 1. CREATE A SOFT PARTICLE BRUSH
+        function initCloudBrush() {
+            const size = 150; 
+            cloudBrush = document.createElement('canvas');
+            cloudBrush.width = size;
+            cloudBrush.height = size;
+            const bCtx = cloudBrush.getContext('2d');
+
+            const grad = bCtx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+            grad.addColorStop(0, 'rgba(255, 255, 255, 1.0)'); 
+            grad.addColorStop(0.4, 'rgba(255, 255, 255, 0.9)'); 
+            grad.addColorStop(0.7, 'rgba(255, 255, 255, 0.3)'); 
+            grad.addColorStop(1, 'rgba(255, 255, 255, 0)'); 
+            
+            bCtx.fillStyle = grad;
+            bCtx.fillRect(0, 0, size, size);
+        }
+
+        class Cloud {
+            constructor(isForeground) {
+                this.reset(true, isForeground);
+            }
+
+            reset(randomX, isForeground) {
+                const w = canvas.width;
+                const h = canvas.height;
+                
+                this.isForeground = isForeground;
+                
+                // Extremely Slow & Peaceful Speed
+                this.speed = isForeground ? (Math.random() * 0.12 + 0.08) : (Math.random() * 0.04 + 0.01);
+                
+                this.x = randomX ? Math.random() * w : w + 200;
+                
+                // Lower the horizon even further (85% down) to reveal 20% more sky
+                const horizon = h * 0.85; 
+                
+                if(isForeground) {
+                    this.y = horizon + Math.random() * (h - horizon) + 50;
+                    this.scale = Math.random() * 1.8 + 1.2; 
+                    this.opacity = Math.random() * 0.2 + 0.8; 
+                } else {
+                    // Distant cloud sea particles
+                    // Start appearing at 55% height (leaving top 55% as clear sky)
+                    const skyClearance = h * 0.55;
+                    this.y = skyClearance + Math.random() * (horizon - skyClearance);
+                    
+                    this.scale = Math.random() * 0.8 + 0.5; 
+                    this.opacity = Math.random() * 0.3 + 0.5; 
+                }
+
+                this.particles = [];
+                const particleCount = Math.floor(Math.random() * 10) + 7; 
+                
+                for(let i=0; i<particleCount; i++) {
+                    this.particles.push({
+                        ox: (Math.random() - 0.5) * 180 * this.scale,
+                        oy: (Math.random() - 0.5) * 60 * this.scale, 
+                        s: (Math.random() * 0.6 + 0.7) * this.scale 
+                    });
+                }
+            }
+
+            update() {
+                this.x -= this.speed;
+                if (this.x < -400) {
+                    this.reset(false, this.isForeground);
+                }
+            }
+
+            draw() {
+                if(!cloudBrush) return;
+                
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                
+                this.particles.forEach((p, index) => {
+                    ctx.globalAlpha = this.opacity; 
+                    ctx.drawImage(cloudBrush, p.ox, p.oy, 100 * p.s, 100 * p.s);
+                });
+
+                ctx.restore();
+            }
+        }
+
+        function initClouds() {
+            initCloudBrush();
+            clouds = [];
+            for(let i=0; i<70; i++) clouds.push(new Cloud(false)); 
+            for(let i=0; i<30; i++) clouds.push(new Cloud(true)); 
+        }
+
+        function drawSky() {
+            const w = canvas.width;
+            const h = canvas.height;
+            
+            const gradient = ctx.createLinearGradient(0, 0, 0, h);
+            // PURE BLUE SKY GRADIENT - Adjusted for more sky
+            gradient.addColorStop(0, '#2980B9'); // Deep clear blue at top
+            gradient.addColorStop(0.75, '#6DD5FA'); // Push light blue lower (was 0.6)
+            gradient.addColorStop(1, '#FFFFFF');    
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, w, h);
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawSky();
+            clouds.forEach(cloud => {
+                cloud.update();
+                cloud.draw();
+            });
+            animationFrameId = requestAnimationFrame(animate);
+        }
+
+        // --- Main App Logic ---
+        const now = new Date();
+        document.getElementById('dateDisplay').innerText = `${now.getMonth() + 1}月${now.getDate()}日`;
+
+        // --- Audio Engine ---
+        let audioCtx;
+        let gainNode;
+        let isNoisePlaying = false;
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+            }
+        }
+
+        function createBrownNoise() {
+            const bufferSize = 2 * audioCtx.sampleRate;
+            const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            let lastOut = 0;
+            for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                output[i] = (lastOut + (0.02 * white)) / 1.02;
+                lastOut = output[i];
+                output[i] *= 3.5; 
+            }
+            return noiseBuffer;
+        }
+
+        function startNoise() {
+            if (!audioCtx) initAudio();
+            if (isNoisePlaying) return;
+
+            const noiseBuffer = createBrownNoise();
+            const noiseSource = audioCtx.createBufferSource();
+            noiseSource.buffer = noiseBuffer;
+            noiseSource.loop = true;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 180; 
+
+            gainNode = audioCtx.createGain();
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            
+            noiseSource.connect(filter);
+            filter.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            noiseSource.start();
+            // Increased volume from 0.15 to 0.25 based on user request
+            gainNode.gain.linearRampToValueAtTime(0.25, audioCtx.currentTime + 5);
+            isNoisePlaying = true;
+        }
+
+        function stopNoise() {
+            if (gainNode && isNoisePlaying) {
+                gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 2);
+                setTimeout(() => {
+                    if(audioCtx) audioCtx.suspend(); 
+                    isNoisePlaying = false;
+                }, 2000);
+            }
+        }
+
+        // --- Chime & Captain Announcement ---
+        function playChime(type = 'announcement') {
+            if (!audioCtx) initAudio();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+
+            const now = audioCtx.currentTime;
+            const osc1 = audioCtx.createOscillator();
+            const gain1 = audioCtx.createGain();
+            osc1.type = 'sine';
+            osc1.connect(gain1);
+            gain1.connect(audioCtx.destination);
+
+            const osc2 = audioCtx.createOscillator();
+            const gain2 = audioCtx.createGain();
+            osc2.type = 'sine';
+            osc2.connect(gain2);
+            gain2.connect(audioCtx.destination);
+
+            if (type === 'announcement') {
+                osc1.frequency.setValueAtTime(600, now); 
+                gain1.gain.setValueAtTime(0.1, now);
+                gain1.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+                osc1.start(now);
+                osc1.stop(now + 1.5);
+
+                osc2.frequency.setValueAtTime(450, now + 0.6);
+                gain2.gain.setValueAtTime(0, now);
+                gain2.gain.setValueAtTime(0.1, now + 0.6);
+                gain2.gain.exponentialRampToValueAtTime(0.001, now + 2.5);
+                osc2.start(now);
+                osc2.stop(now + 3.0);
+            } else {
+                osc1.frequency.setValueAtTime(600, now);
+                gain1.gain.setValueAtTime(0.1, now);
+                gain1.gain.exponentialRampToValueAtTime(0.00001, now + 2);
+                osc1.start(now);
+                osc1.stop(now + 2);
+            }
+        }
+
+        function speakCaptain() {
+            if ('speechSynthesis' in window) {
+                const msg = new SpeechSynthesisUtterance();
+                msg.text = "This is your captain speaking. We are ready for takeoff. Relax and focus. Enjoy your flight.";
+                msg.lang = 'en-US'; 
+                msg.volume = 0.3; // Reduced volume from 1.0 to 0.3
+                msg.rate = 0.85; 
+                msg.pitch = 0.9; 
+                setTimeout(() => {
+                    window.speechSynthesis.speak(msg);
+                }, 2000);
+            }
+        }
+
+        // --- UI & Timer Logic ---
+        let timerInterval;
+        let remainingSeconds = 0;
+
+        const body = document.body;
+        const setupPanel = document.getElementById('setupPanel');
+        const flightPanel = document.getElementById('flightPanel');
+        const arrivalModal = document.getElementById('arrivalModal');
+        const confirmModal = document.getElementById('confirmModal'); // New Modal Ref
+        const timeDisplay = document.getElementById('timeDisplay');
+        const timeSlider = document.getElementById('timeSlider');
+        const countdownDisplay = document.getElementById('countdown');
+        const taskInput = document.getElementById('taskInput');
+        const currentTaskDisplay = document.getElementById('currentTaskDisplay');
+        const windowFrame = document.getElementById('windowFrame');
+        const noiseToggle = document.getElementById('noiseToggle');
+
+        noiseToggle.addEventListener('change', function() {
+             const label = this.nextElementSibling;
+             if(this.checked) {
+                 label.classList.add('bg-green-400');
+                 label.classList.remove('bg-gray-200');
+             } else {
+                 label.classList.add('bg-gray-200');
+                 label.classList.remove('bg-green-400');
+             }
+        });
+
+        timeSlider.addEventListener('input', (e) => {
+            timeDisplay.innerText = e.target.value;
+        });
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = seconds % 60;
+            return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function startFlight() {
+            const minutes = parseInt(timeSlider.value);
+            const task = taskInput.value.trim() || "FREE FLIGHT";
+            const useNoise = noiseToggle.checked;
+
+            remainingSeconds = minutes * 60;
+
+            resizeCanvas();
+            initClouds();
+            animate();
+            
+            windowFrame.classList.add('vibrating');
+            
+            setupPanel.classList.add('hidden-view');
+            setupPanel.classList.remove('visible-view');
+            
+            setTimeout(() => {
+                flightPanel.classList.remove('hidden-view');
+                flightPanel.classList.add('visible-view');
+            }, 600);
+            
+            body.classList.add('flying-mode'); 
+            
+            currentTaskDisplay.innerText = task;
+            countdownDisplay.innerText = formatTime(remainingSeconds);
+
+            if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+            else initAudio();
+
+            playChime('announcement');
+            speakCaptain();
+
+            if (useNoise) {
+                if(gainNode) {
+                    gainNode.gain.cancelScheduledValues(audioCtx.currentTime);
+                    // Ensure resumed volume matches new level (0.25)
+                    gainNode.gain.linearRampToValueAtTime(0.25, audioCtx.currentTime + 5);
+                } else {
+                    startNoise();
+                }
+            }
+
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                remainingSeconds--;
+                countdownDisplay.innerText = formatTime(remainingSeconds);
+                if (remainingSeconds <= 0) finishFlight();
+            }, 1000);
+        }
+
+        // Replaced native confirm with Custom Modal Logic
+        function showConfirmModal() {
+            confirmModal.classList.remove('hidden');
+        }
+
+        function confirmLand() {
+            confirmModal.classList.add('hidden');
+            finishFlight();
+        }
+
+        function cancelLand() {
+            confirmModal.classList.add('hidden');
+        }
+
+        function finishFlight() {
+            clearInterval(timerInterval);
+            cancelAnimationFrame(animationFrameId); 
+            stopNoise();
+            windowFrame.classList.remove('vibrating');
+            playChime('landing');
+            arrivalModal.classList.remove('hidden');
+        }
+
+        function resetApp() {
+            arrivalModal.classList.add('hidden');
+            
+            flightPanel.classList.add('hidden-view');
+            flightPanel.classList.remove('visible-view');
+            
+            body.classList.remove('flying-mode');
+            
+            setTimeout(() => {
+                setupPanel.classList.remove('hidden-view');
+                setupPanel.classList.add('visible-view');
+            }, 600);
+        }
+    </script>
+</body>
+</html>
