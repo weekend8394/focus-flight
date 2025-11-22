@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>專注航班 Focus Flight</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -11,16 +11,23 @@
         @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Libre+Barcode+39&display=swap');
 
+        :root {
+            --app-height: 100dvh;
+        }
+
         body {
             font-family: 'Noto Sans TC', sans-serif;
-            overflow: hidden;
+            overflow: hidden; /* No scroll on body */
             background-color: #f0f0f0;
             transition: background-color 2s ease;
             height: 100vh;
+            height: 100dvh; 
             width: 100vw;
             display: flex;
             align-items: center;
             justify-content: center;
+            margin: 0;
+            padding: 0;
         }
 
         body.flying-mode {
@@ -36,31 +43,35 @@
             background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
         }
 
-        /* Window Structure - Full Screen Size */
+        /* Window Structure */
         .window-outer-bezel {
             position: relative;
-            height: 85vh; 
-            width: 56vh; 
+            height: 80vh; 
+            width: 52vh; 
             max-width: 90vw;
             margin: 0 auto;
             border-radius: 20vh;
             background: #e8e8e8;
             box-shadow: 
-                -15px -15px 30px rgba(255,255,255,0.8),
-                15px 15px 30px rgba(0,0,0,0.2),
-                inset 5px 5px 20px rgba(255,255,255,0.9),
-                inset -5px -5px 20px rgba(0,0,0,0.1);
+                -10px -10px 20px rgba(255,255,255,0.8),
+                10px 10px 20px rgba(0,0,0,0.2),
+                inset 5px 5px 15px rgba(255,255,255,0.9),
+                inset -5px -5px 15px rgba(0,0,0,0.1);
             padding: 4vh;
             transition: transform 0.5s ease;
             z-index: 10;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         @media (max-width: 768px) {
             .window-outer-bezel {
-                width: 85vw;
-                height: 75vh;
+                width: 88vw;
+                height: 60dvh;
                 border-radius: 100px;
                 padding: 20px;
+                margin-top: -10vh;
             }
         }
 
@@ -68,15 +79,15 @@
             width: 100%;
             height: 100%;
             border-radius: 16vh;
-            background: #cbd5e1; /* Changed from #1a1a1a to light grey-blue */
+            background: #cbd5e1; 
             padding: 1.5vh;
-            box-shadow: inset 2px 2px 8px rgba(0,0,0,0.15); /* Softer shadow */
+            box-shadow: inset 2px 2px 8px rgba(0,0,0,0.15); 
         }
 
         @media (max-width: 768px) {
             .window-inner-bezel {
                 border-radius: 80px;
-                padding: 10px;
+                padding: 12px;
             }
         }
 
@@ -86,7 +97,6 @@
             border-radius: 14.5vh;
             overflow: hidden;
             position: relative;
-            /* Sky Blue Fallback */
             background: #6DD5FA; 
         }
 
@@ -144,15 +154,26 @@
             100% { transform: translate(0, 0); }
         }
 
-        /* Ticket UI */
+        /* --- TICKET UI (NO SCROLL REFACTOR) --- */
         .ticket-container {
             background: #fff;
-            border-radius: 24px;
+            border-radius: 20px;
             box-shadow: 0 25px 60px rgba(0,0,0,0.25);
             overflow: hidden;
             position: relative;
+            
+            /* Flex container to manage height */
+            display: flex;
+            flex-direction: column;
+            
+            /* Sizing */
             width: 90%;
             max-width: 480px;
+            
+            /* Key to no scroll: adapt to height */
+            height: auto;
+            max-height: 92dvh; /* Leave small margin */
+            
             transform: scale(1);
             transition: transform 0.3s ease;
         }
@@ -160,9 +181,10 @@
         .ticket-header {
             background: #0f172a;
             color: white;
-            padding: 24px 32px;
+            padding: 20px 28px;
             border-bottom: 3px dashed rgba(255,255,255,0.15);
             position: relative;
+            flex-shrink: 0; /* Don't shrink header */
         }
         
         .ticket-header::after, .ticket-header::before {
@@ -178,10 +200,22 @@
         .ticket-header::before { left: -12px; }
 
         .ticket-body {
-            padding: 32px;
+            padding: 24px 28px;
             background-color: #fff;
             background-image: radial-gradient(#e5e7eb 1px, transparent 1px);
             background-size: 16px 16px;
+            
+            /* Flex body to distribute space */
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; /* Evenly space contents */
+            overflow: hidden; /* Cut off if really too small, but flex should handle */
+        }
+
+        /* Ticket Input Area */
+        .ticket-section {
+            margin-bottom: 0; /* Remove margins, let flex justify-content handle spacing */
         }
 
         .ticket-input {
@@ -191,7 +225,7 @@
             font-family: 'Share Tech Mono', monospace;
             letter-spacing: 1px;
             width: 100%;
-            padding: 8px 0;
+            padding: 4px 0;
             font-size: 1.2rem;
             color: #1e293b;
             text-transform: uppercase;
@@ -202,16 +236,51 @@
             outline: none;
             border-bottom-color: #0f172a;
         }
-        .ticket-input::placeholder {
-            font-size: 1rem;
-        }
 
+        .barcode-container {
+            text-align: center;
+            margin-top: 10px;
+            flex-shrink: 1; /* Allow shrinking */
+            overflow: hidden;
+        }
         .barcode-font {
             font-family: 'Libre Barcode 39', cursive;
-            font-size: 56px;
+            font-size: 48px;
             color: #334155;
             line-height: 1;
-            margin-top: 10px;
+            white-space: nowrap;
+        }
+
+        .boarding-btn {
+            width: 100%;
+            background: #0f172a;
+            color: white;
+            padding: 18px;
+            font-weight: bold;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: background 0.3s;
+            flex-shrink: 0; /* Don't shrink button */
+        }
+        .boarding-btn:hover { background: black; }
+
+        /* --- MOBILE COMPACT MODE --- */
+        @media (max-height: 700px) {
+            .ticket-header { padding: 15px 20px; }
+            .ticket-body { padding: 15px 20px; }
+            .ticket-input { font-size: 1rem; }
+            .boarding-btn { padding: 15px; }
+            .barcode-font { font-size: 32px; }
+            .text-xl { font-size: 1rem; } /* Downsize text */
+            .text-lg { font-size: 0.875rem; }
+            
+            /* Hide redundant text on very short screens */
+            .hide-on-short { display: none; }
         }
 
         /* Transitions */
@@ -221,7 +290,7 @@
             transform: scale(0.95) translateY(-30px);
             transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
             position: absolute;
-            z-index: -1; /* Ensure it doesn't block clicks when hidden */
+            z-index: -1;
         }
         
         .visible-view {
@@ -240,12 +309,12 @@
         }
         input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            height: 24px;
-            width: 24px;
+            height: 20px;
+            width: 20px;
             border-radius: 50%;
             background: #0f172a;
             cursor: pointer;
-            margin-top: -10px;
+            margin-top: -8px;
             box-shadow: 0 0 0 4px rgba(15, 23, 42, 0.1);
         }
         input[type=range]::-webkit-slider-runnable-track {
@@ -279,94 +348,113 @@
             50% { opacity: 0.2; }
         }
 
+        @media (max-width: 768px) {
+            #hudControls {
+                bottom: 3vh;
+                width: 100%;
+            }
+            .hud-panel {
+                padding: 15px 30px;
+                margin-bottom: 15px;
+            }
+            #countdown {
+                font-size: 2.5rem !important;
+            }
+        }
+
     </style>
 </head>
 <body class="cabin-wall text-gray-700">
 
     <!-- Ticket Setup Screen -->
-    <div id="setupPanel" class="visible-view flex justify-center items-center w-full h-full">
+    <div id="setupPanel" class="visible-view flex justify-center items-center w-full h-full p-2">
         <div class="ticket-container">
             <div class="ticket-header">
-                <div class="flex justify-between items-center mb-2">
-                    <h2 class="text-2xl font-bold tracking-widest flex items-center gap-3">
+                <div class="flex justify-between items-center mb-1">
+                    <h2 class="text-xl font-bold tracking-widest flex items-center gap-2">
                         <i class="fas fa-plane-departure"></i> FOCUS AIR
                     </h2>
-                    <span class="bg-white/20 px-3 py-1 rounded text-xs font-bold uppercase tracking-wider">First Class</span>
+                    <span class="bg-white/20 px-2 py-1 rounded text-[10px] font-bold uppercase tracking-wider">First Class</span>
                 </div>
-                <div class="flex justify-between text-xs opacity-60 uppercase tracking-wider font-mono">
+                <div class="flex justify-between text-[10px] opacity-60 uppercase tracking-wider font-mono">
                     <span>Passenger Ticket</span>
                     <span>& Baggage Check</span>
                 </div>
             </div>
 
             <div class="ticket-body">
-                <div class="flex justify-between mb-8 gap-6">
+                <!-- Top Inputs -->
+                <div class="flex justify-between gap-4 ticket-section">
                     <div class="w-1/2">
-                        <div class="text-xs text-gray-400 uppercase font-bold mb-1">From (Origin)</div>
-                        <div class="text-xl font-bold text-gray-800 font-mono border-b-2 border-transparent pb-1.5">REALITY</div>
+                        <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">From (Origin)</div>
+                        <div class="text-lg font-bold text-gray-800 font-mono border-b-2 border-transparent pb-1">REALITY</div>
                     </div>
                     <div class="w-1/2 text-right">
-                        <div class="text-xs text-gray-400 uppercase font-bold mb-1">To (Goal)</div>
+                        <div class="text-[10px] text-gray-400 uppercase font-bold mb-1">To (Goal)</div>
                         <input type="text" id="taskInput" placeholder="DEEP WORK" class="ticket-input text-right">
                     </div>
                 </div>
 
-                <div class="grid grid-cols-4 gap-3 mb-10">
-                    <div class="text-center p-3 bg-gray-50 rounded-lg border border-gray-100">
-                        <div class="text-[10px] text-gray-400 uppercase font-bold">Flight</div>
-                        <div class="text-lg font-bold text-gray-800 font-mono">FA88</div>
+                <!-- Grid Info -->
+                <div class="grid grid-cols-4 gap-2 ticket-section my-2">
+                    <div class="text-center p-2 bg-gray-50 rounded-lg border border-gray-100">
+                        <div class="text-[9px] text-gray-400 uppercase font-bold">Flight</div>
+                        <div class="text-sm font-bold text-gray-800 font-mono">FA88</div>
                     </div>
-                    <div class="text-center p-3 bg-gray-50 rounded-lg border border-gray-100">
-                        <div class="text-[10px] text-gray-400 uppercase font-bold">Gate</div>
-                        <div class="text-lg font-bold text-gray-800 font-mono">01</div>
+                    <div class="text-center p-2 bg-gray-50 rounded-lg border border-gray-100">
+                        <div class="text-[9px] text-gray-400 uppercase font-bold">Gate</div>
+                        <div class="text-sm font-bold text-gray-800 font-mono">01</div>
                     </div>
-                    <div class="text-center p-3 bg-gray-50 rounded-lg border border-gray-100">
-                        <div class="text-[10px] text-gray-400 uppercase font-bold">Seat</div>
-                        <div class="text-lg font-bold text-gray-800 font-mono">1A</div>
+                    <div class="text-center p-2 bg-gray-50 rounded-lg border border-gray-100">
+                        <div class="text-[9px] text-gray-400 uppercase font-bold">Seat</div>
+                        <div class="text-sm font-bold text-gray-800 font-mono">1A</div>
                     </div>
-                    <div class="text-center p-3 bg-gray-50 rounded-lg border border-gray-100">
-                        <div class="text-[10px] text-gray-400 uppercase font-bold">Date</div>
-                        <div id="dateDisplay" class="text-lg font-bold text-gray-800 font-mono">NOW</div>
+                    <div class="text-center p-2 bg-gray-50 rounded-lg border border-gray-100">
+                        <div class="text-[9px] text-gray-400 uppercase font-bold">Date</div>
+                        <div id="dateDisplay" class="text-sm font-bold text-gray-800 font-mono">NOW</div>
                     </div>
                 </div>
 
-                <div class="mb-8">
-                    <div class="flex justify-between items-end mb-4">
-                        <label class="text-xs font-bold text-gray-400 uppercase tracking-wide">Flight Duration</label>
-                        <div class="text-3xl font-bold text-gray-800 font-mono"><span id="timeDisplay">25</span> <span class="text-sm text-gray-500">MIN</span></div>
+                <!-- Duration -->
+                <div class="ticket-section my-2">
+                    <div class="flex justify-between items-end mb-2">
+                        <label class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Flight Duration</label>
+                        <div class="text-2xl font-bold text-gray-800 font-mono"><span id="timeDisplay">25</span> <span class="text-xs text-gray-500">MIN</span></div>
                     </div>
                     <input type="range" id="timeSlider" min="5" max="120" value="25" step="5" class="w-full">
-                    <div class="flex justify-between text-[10px] text-gray-400 mt-2 font-mono">
+                    <div class="flex justify-between text-[9px] text-gray-400 mt-1 font-mono hide-on-short">
                         <span>SHORT HAUL</span>
                         <span>LONG HAUL</span>
                     </div>
                 </div>
 
-                <div class="flex items-center justify-between pt-5 border-t border-dashed border-gray-200">
-                    <div class="flex items-center gap-3 text-gray-600">
-                         <i class="fas fa-volume-up text-lg"></i>
-                         <span class="text-xs font-bold uppercase tracking-wide">Cabin Engine Sound</span>
+                <!-- Toggle -->
+                <div class="flex items-center justify-between pt-2 border-t border-dashed border-gray-200 ticket-section">
+                    <div class="flex items-center gap-2 text-gray-600">
+                         <i class="fas fa-volume-up text-sm"></i>
+                         <span class="text-[10px] font-bold uppercase tracking-wide">Cabin Engine Sound</span>
                     </div>
-                    <div class="relative inline-block w-12 h-6 align-middle select-none">
-                        <input type="checkbox" name="toggle" id="noiseToggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-2 border-gray-300 appearance-none cursor-pointer transition-all duration-300 shadow-sm" style="top:0; left:0" checked/>
-                        <label for="noiseToggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-200 cursor-pointer transition-colors duration-300"></label>
+                    <div class="relative inline-block w-10 h-5 align-middle select-none">
+                        <input type="checkbox" name="toggle" id="noiseToggle" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-2 border-gray-300 appearance-none cursor-pointer transition-all duration-300 shadow-sm" style="top:0; left:0" checked/>
+                        <label for="noiseToggle" class="toggle-label block overflow-hidden h-5 rounded-full bg-gray-200 cursor-pointer transition-colors duration-300"></label>
                     </div>
                 </div>
                 
-                <div class="text-center mt-6">
+                <div class="barcode-container ticket-section">
                     <div class="barcode-font opacity-40 transform scale-y-75">123456789012</div>
                 </div>
             </div>
 
-            <button onclick="startFlight()" class="w-full bg-gray-900 hover:bg-black text-white py-5 font-bold text-base uppercase tracking-widest transition-colors flex items-center justify-center gap-3">
-                <span>Boarding Now</span> <i class="fas fa-walking text-lg"></i>
+            <button onclick="startFlight()" class="boarding-btn">
+                <span>Boarding Now</span> <i class="fas fa-walking"></i>
             </button>
         </div>
     </div>
 
     <!-- Immersive Flight Mode -->
-    <div id="flightPanel" class="hidden-view absolute inset-0 flex flex-col items-center justify-center">
+    <div id="flightPanel" class="hidden-view absolute inset-0 flex flex-col items-center justify-center overflow-hidden">
         
+        <!-- The Window -->
         <div id="windowFrame" class="window-outer-bezel">
             <div class="window-inner-bezel">
                 <div class="window-view-port">
@@ -379,6 +467,7 @@
             </div>
         </div>
 
+        <!-- HUD (Heads Up Display) -->
         <div id="hudControls" class="absolute bottom-8 flex flex-col items-center transition-opacity duration-500 hover:opacity-100 opacity-60 z-30">
             
             <div class="hud-panel px-10 py-5 rounded-full flex flex-col items-center mb-6 backdrop-blur-md border border-white/10 shadow-2xl">
@@ -390,7 +479,7 @@
             </div>
 
             <!-- Updated Button triggers custom modal -->
-            <button onclick="showConfirmModal()" class="group text-white/50 hover:text-white text-xs tracking-[0.2em] uppercase transition-colors py-3 px-6 rounded-full flex items-center gap-2 bg-black/20 hover:bg-black/40 cursor-pointer z-40">
+            <button onclick="showConfirmModal()" class="group text-white/50 hover:text-white text-xs tracking-[0.2em] uppercase transition-colors py-3 px-6 rounded-full flex items-center gap-2 bg-black/20 hover:bg-black/40 cursor-pointer z-40 backdrop-blur-sm">
                 <span class="group-hover:translate-y-0.5 transition-transform"><i class="fas fa-plane-arrival"></i></span>
                 Emergency Landing
             </button>
@@ -398,7 +487,7 @@
     </div>
 
     <!-- Confirm Landing Modal -->
-    <div id="confirmModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden">
+    <div id="confirmModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center hidden p-4">
         <div class="bg-white rounded-2xl p-8 max-w-xs w-full text-center shadow-2xl">
             <div class="text-xl font-bold text-gray-800 mb-2">Request Landing?</div>
             <p class="text-sm text-gray-500 mb-6">Are you sure you want to end your focus session early?</p>
@@ -414,7 +503,7 @@
     </div>
 
     <!-- Arrival Modal -->
-    <div id="arrivalModal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center hidden transition-opacity duration-500">
+    <div id="arrivalModal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex items-center justify-center hidden transition-opacity duration-500 p-4">
         <div class="bg-white rounded-3xl p-0 max-w-sm w-full text-center m-4 shadow-2xl overflow-hidden transform scale-100">
             <div class="bg-gradient-to-br from-green-500 to-emerald-700 p-8">
                 <i class="fas fa-check-circle text-white text-6xl shadow-lg rounded-full"></i>
